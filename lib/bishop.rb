@@ -49,13 +49,15 @@ class Bishop < Gamepiece
     def jumping? first, second, white, black
         deltas = get_deltas(first, second)
         (deltas[0].abs - 1).times do
-            first[0] += 1; first[1] += 1
-            if find_piece(first.join(""))
+            first[0] = (first[0].ord + 1).chr
+            first[1] = (first[1].to_i + 1).to_s
+            if find_piece(first.join(""), white, black)
+                puts "Cannot jump over pieces"
                 return true
             end
         end
-        # if checks pass, return true
-        return true
+        # if checks pass, return false (not jumping)
+        return false
     end
 
     def get_deltas first, second

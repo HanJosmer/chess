@@ -32,13 +32,15 @@ class Rook < Gamepiece
             return false
         end
 
-        check_for_pieces() # checks whether any pieces are in the way
+        unless white.empty?() || black.empty?()
+            return false if jumping?(first, second, white, black)
+        end
 
         # if move passes all checks, return true
         return true
     end
 
-    def check_for_pieces
+    def jumping?
         # TODO
     end
 end
