@@ -3,12 +3,13 @@ require "./lib/gamepiece.rb"
 class King < Gamepiece
 
     attr_accessor :pos, :move
-    attr_reader :sym, :color
+    attr_reader :sym, :color, :type
 
     def initialize(pos, color)
         @pos = pos
         @color = color
         @move = 0
+        @type = "king"
 
         # set symbol code depending on piece color
         case @color
@@ -19,11 +20,16 @@ class King < Gamepiece
         end
     end
 
-    def valid_move? from, to, take=false
+    def valid_move? from, to, white=[], black=[]
         # kings can move one square in any direction
 
         first = from.split("")
         second = to.split("")
+
+        # check whether player sets were passed in correctly
+        if white.empty? || black.empty?
+            return false
+        end
 
         # individual delta must not exceed 1
         delta_x = (first[0].ord) - (second[0].ord)
@@ -37,9 +43,7 @@ class King < Gamepiece
         else
             return false
         end
-    end
 
-    def check_for_pieces()
-        # TODO
+        # king only moves one space.  jumping isn't possible
     end
 end

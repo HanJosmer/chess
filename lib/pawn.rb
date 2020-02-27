@@ -1,14 +1,18 @@
 require "./lib/gamepiece.rb"
+require "./lib/finder.rb"
 
 class Pawn < Gamepiece
     
+    include Finder
+    
     attr_accessor :pos, :move
-    attr_reader :sym, :color
+    attr_reader :sym, :color, :type
 
     def initialize(pos, color)
         @pos = pos
         @color = color
         @move = 0
+        @type = "pawn"
 
         # set symbol code depending on piece color
         case @color
@@ -19,9 +23,14 @@ class Pawn < Gamepiece
         end
     end
 
+    def message square, white, black
+        piece = find_piece(square, white, black)
+        puts "Cannot jump over #{piece.type} at square #{square}"
+    end
+
     # need to account for whether piece is white or black
     # direction matters, only for pawns
-    def valid_move? from, to, take
+    def valid_move? from, to, white=[], black=[]
         # split x and y coordinates of start and end squares
         first = from.split("")
         second = to.split("")

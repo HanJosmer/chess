@@ -3,7 +3,7 @@
 require './lib/rook.rb'
 
 RSpec.describe Rook do
-    describe "#check_for_pieces" do
+    describe "#jumping?" do
         # TODO
     end
 

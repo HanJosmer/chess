@@ -6,12 +6,13 @@ class Bishop < Gamepiece
     include Finder
 
     attr_accessor :pos, :move
-    attr_reader :sym, :color
+    attr_reader :sym, :color, :type
 
     def initialize(pos, color)
         @pos = pos
         @color = color
         @move = 0
+        @type = "bishop"
 
         # set symbol code depending on piece color
         case @color
@@ -27,6 +28,11 @@ class Bishop < Gamepiece
         first = from.split("")
         second = to.split("")
         
+        # check whether player sets were passed in correctly
+        if white.empty? || black.empty?
+            return false
+        end
+
         # bishops can move diagonally however far they choose
         # they cannot 'jump' pieces, even their own
 
@@ -37,25 +43,75 @@ class Bishop < Gamepiece
             return false
         end
 
-        # do not check for intermediary pieces if either set is empty
-        unless white.empty?() || black.empty?()
-            return false if jumping?(first, second, white, black)
+        # determine movement direction
+        direction = ""
+        if deltas[0] < 0 && deltas[1] < 0
+            direction = "up-right"
+        elsif deltas[0] > 0 && deltas[1] < 0
+            direction = "up-left"
+        elsif deltas[0] < 0 && deltas[1] > 0
+            direction = "down-right"
+        else
+            direction = "down-left"
+        end
+
+        # bishops may not jump over over pieces
+        if jumping?(first, second, white, black, direction)
+            return false
         end
         
         # if move passes all checks, return true
         return true
     end
 
-    def jumping? first, second, white, black
+    def message square, white, black
+        piece = find_piece(square, white, black)
+        puts "Cannot jump over #{piece.type} at square #{square}"
+    end
+
+
+    def jumping? first, second, white, black, direction
         deltas = get_deltas(first, second)
-        (deltas[0].abs - 1).times do
-            first[0] = (first[0].ord + 1).chr
-            first[1] = (first[1].to_i + 1).to_s
-            if find_piece(first.join(""), white, black)
-                puts "Cannot jump over pieces"
-                return true
+        # directional quandrants: one, two, three, four
+        case direction
+        when "up-right"
+            (deltas[0].abs - 1).times do
+                first[0] = (first[0].ord + 1).chr
+                first[1] = (first[1].to_i + 1).to_s
+                if find_piece(first.join(""), white, black)
+                    message(first.join(""), white, black)
+                    return true # jumping
+                end
+            end
+        when "up-left"
+            (deltas[0].abs - 1).times do
+                first[0] = (first[0].ord - 1).chr
+                first[1] = (first[1].to_i + 1).to_s
+                if find_piece(first.join(""), white, black)
+                    message(first.join(""), white, black)
+                    return true # jumping
+                end
+            end
+        when "down-right"
+            (deltas[0].abs - 1).times do
+                first[0] = (first[0].ord + 1).chr
+                first[1] = (first[1].to_i - 1).to_s
+                if find_piece(first.join(""), white, black)
+                    message(first.join(""), white, black)
+                    return true # jumping
+                end
+            end
+        when "down-left"
+            (deltas[0].abs - 1).times do
+                first[0] = (first[0].ord - 1).chr
+                first[1] = (first[1].to_i - 1).to_s
+                if find_piece(first.join(""), white, black)
+                    message(first.join(""), white, black)
+                    return true # jumping
+                end
             end
         end
+
         # if checks pass, return false (not jumping)
         return false
     end

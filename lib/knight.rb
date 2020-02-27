@@ -3,12 +3,13 @@ require "./lib/gamepiece.rb"
 class Knight < Gamepiece
 
     attr_accessor :pos, :move
-    attr_reader :sym, :color
+    attr_reader :sym, :color, :type
 
     def initialize(pos, color)
         @pos = pos
         @color = color
         @move = 0
+        @type = "knight"
         
         # set symbol code depending on piece color
         case @color
@@ -19,23 +20,30 @@ class Knight < Gamepiece
         end
     end
 
-    def valid_move? from, to, take=false
+    def valid_move? from, to, white=[], black=[]
         # knights move two squares in one direction
         # and one square at 90 degrees
 
         first = from.split("")
         second = to.split("")
 
+        # check whether player sets were passed in correctly
+        if white.empty? || black.empty?
+            return false
+        end
+
         # calculate direction deltas
         delta_x = (first[0].ord) - (second[0].ord)
         delta_y = (first[1].to_i) - (second[1].to_i)
         
         if lat_move?(delta_x, delta_y) || long_move?(delta_x, delta_y)
-            check_for_pieces() # checks for pieces in the way
             return true
         else
             return false
         end
+
+        # knights are allowed to jump over other pieces
+        # no #jumping method is needed
     end
 
     def lat_move? delta_x, delta_y
@@ -54,9 +62,5 @@ class Knight < Gamepiece
         else
             return false
         end
-    end
-
-    def check_for_pieces()
-        # TODO
     end
 end
