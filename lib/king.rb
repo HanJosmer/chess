@@ -38,7 +38,6 @@ class King < Gamepiece
         total_delta = (delta_x.abs) + (delta_y.abs)
         
         if total_delta.between?(1,2) && (delta_x.abs < 2) && (delta_y.abs < 2)
-            check_for_pieces() # check for any pieces in the way
             return true            
         else
             return false

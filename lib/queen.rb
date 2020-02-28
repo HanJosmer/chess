@@ -88,6 +88,11 @@ class Queen < Gamepiece
     end
 
     def jumping? first, second, black, white, direction
+        # get deltas
+        delta_x = (first[0].ord) - (second[0].ord)
+        delta_y = (first[1].to_i) - (second[1].to_i)
+        deltas = [delta_x, delta_y]
+
         case direction
         when "up"
             delta_y = (first[1].to_i) - (second[1].to_i)

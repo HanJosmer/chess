@@ -17,39 +17,113 @@ class Chess
     def initialize
         @board = Board.new()
         @alph_map = ["1", "2", "3", "4", "5", "6", "7", "8"].reverse()
+        @turn = 1
 
-        initialize_white()
-        initialize_black()
+        initialize_white() # player one
+        initialize_black() # player two
 
-        # play()
-        draw_board()
+        play()
     end
 
     # main play loop method
     def play
-        loop do
-            draw_board()
-            print "Player one, it's your move: "
-            from, to = (gets.chomp().split(", "))
-            move(from, to)
+        begin
+            loop do
+                # from, to = (gets.chomp().split(", ")) # get input from player
+                from = get_first()
+                to = get_second(from)
+                move(from, to)
+                end_turn()
+            end
+        rescue Interrupt => e
+            print "\nAre you sure you want to quit the game?\n"
+            print "(yes/no): "
+            choice = gets.chomp
+            if choice == "yes"
+                # ask player about saving here
+                return
+            else
+                retry
+            end
+        ensure
+            puts "Thanks for playing!"
+        end
+    end
+
+    def get_first
+        begin
+            update_display()
+            print "\nSelect which piece to move: "
+            from = gets.chomp()
+            unless on_board?(from)
+                raise
+            end
+        rescue
+            print "Location is not on the board. Please try again\n"
+            print "Press Enter to continue"
+            gets.chomp()
+            retry
+        end
+        return from
+    end
+
+    def get_second from
+        begin
+            update_display()
+            first = find_piece(from, @white, @black)
+            print "\nSelect where to move #{first.type} at #{from}: "
+            to = gets.chomp()
+            unless on_board?(to)
+                raise
+            end
+        rescue Interrupt
+            from = get_first()
+            retry
+        rescue => e
+            print "Location is not on the board. Please try again\n"
+            print "Press Enter to continue\n"
+            gets.chomp()
+            puts e
+            retry
+        end
+        return to
+    end
+
+    def end_turn()
+        if @turn == 1
+            @turn = 2
+        else
+            @turn = 1
         end
     end
 
     # moves piece from one square (from) to another (to)
     # manipulates internal states of objects. return value unimportant
     def move from, to
-        # check whether first square contains a piece
+        # check whether player selections are on board
+        unless on_board?(from) && on_board?(to)
+            puts "One or both selections do not exist on the board"
+            return
+        end
+
         first = find_piece(from, @white, @black)
-        if first && on_board?(to)
-            # check whether second square contains a piece
+        # check whether first square contains a piece
+        if first
             second = find_piece(to, @white, @black)
+            # check whether second square contains a piece
             if second
+                # pieces should not be from same set
+                if first.color == second.color
+                    puts "#{second.color} #{second.type} already exists at #{to}"
+                    return
+                end
+                
                 # if move is valid, execute it and increment piece's move counter
                 if first.valid_move?(from, to, @white, @black)
                     first.pos = to
                     first.move += 1
                     
-                    # remove taken piece from corresponding set
+                    # remove piece from corresponding set
                     case second.color
                     when "white"
                         @white.delete(second)
@@ -130,10 +204,16 @@ class Chess
         @black.push(Pawn.new("h7", "black"))
     end
 
+    # redraws the display including the board and game text
+    def update_display
+        refresh()
+        print "Player #{@turn}, it's your turn\n\n"
+        draw_board()
+        # print "Please type your move (separate with a comma): "
+    end
+
     # draws the board to the console
     def draw_board
-        # refresh console before redrawing board. for better UI
-        refresh()
         @board.board.each_with_index do |row, index|
             print @alph_map[index]
             row.each do |col|
@@ -172,6 +252,7 @@ class Chess
     def refresh
         system("clear")
     end
+
 end
 
-# Chess.new().draw_board()
+Chess.new()

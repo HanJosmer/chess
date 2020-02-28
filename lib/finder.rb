@@ -1,3 +1,5 @@
+# used for finding pieces on the board
+
 module Finder
     
     # checks black and white sets for piece located at target square
