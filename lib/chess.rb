@@ -55,13 +55,17 @@ class Chess
             update_display()
             print "\nSelect which piece to move: "
             from = gets.chomp()
-            unless on_board?(from)
-                raise
+            if !on_board?(from)
+                raise OffBoardError
             end
-        rescue
-            print "Location is not on the board. Please try again\n"
-            print "Press Enter to continue"
-            gets.chomp()
+            if !find_piece(from, @white, @black)
+                raise NoPieceFoundError
+            end
+        rescue OffBoardError => e
+            e.message()
+            retry
+        rescue NoPieceFoundError => e
+            e.message(from)
             retry
         end
         return from
@@ -253,6 +257,22 @@ class Chess
         system("clear")
     end
 
+end
+
+class OffBoardError < StandardError
+    def message
+        print "Location is not on the board. Please try again\n"
+        print "Press Enter to continue"
+        gets.chomp()
+    end
+end
+
+class NoPieceFoundError < StandardError
+    def message from
+        print "No piece found at #{from}. Please try again\n"
+        print "Press Enter to continue"
+        gets.chomp()
+    end
 end
 
 Chess.new()
