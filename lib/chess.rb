@@ -17,7 +17,7 @@ class Chess
     def initialize
         @board = Board.new()
         @alph_map = ["1", "2", "3", "4", "5", "6", "7", "8"].reverse()
-        @turn = 1
+        @turn = "white"
 
         initialize_white() # player one
         initialize_black() # player two
@@ -29,11 +29,23 @@ class Chess
     def play
         begin
             loop do
-                # from, to = (gets.chomp().split(", ")) # get input from player
+                update_display()
                 from = get_first()
                 to = get_second(from)
-                move(from, to)
-                end_turn()
+                begin
+                    move(from, to)
+                rescue InvalidMoveError => e
+                    e.message(from, to)
+                    to = get_second(from)
+                    retry
+                end
+                # check for win conditions
+                if checkmate?()
+                    congratulate()
+                    return
+                else
+                    end_turn()
+                end
             end
         rescue Interrupt => e
             print "\nAre you sure you want to quit the game?\n"
@@ -50,6 +62,86 @@ class Chess
         end
     end
 
+    # called after player makes move
+    def checkmate?
+        case @turn
+        when "white"
+            king = find_king(@black)
+            king_square = king.pos
+            # does not currently check whether move is on board
+            # does not currently check whether another piece is in the way
+            moves = possible_moves(king)
+            # for every possible move, if the king is still in check it is checkmate
+            checkmate = moves.all? do |move|
+                king.pos = move
+                check?()
+            end
+            if checkmate
+                return true
+            else
+                king.pos = king_square
+                return false
+            end
+        when "black"
+            king = find_king(@white)
+            king_square = king.pos
+            # does not currently check whether move is on board
+            # does not currently check whether another piece is in the way
+            moves = possible_moves(king)
+            # for every possible move, if the king is still in check it is checkmate
+            checkmate = moves.all? do |move|
+                king.pos = move
+                check?()
+            end
+            if checkmate
+                return true
+            else
+                king.pos = king_square
+                return false
+            end
+        end
+    end
+
+    def possible_moves king
+        sq = king.pos.split("")
+        moves = []
+        moves.push([sq[0], (sq[1].to_i + 1).to_s]).join("") # up
+        moves.push([sq[0], (sq[1].to_i - 1).to_s]).join("") # down
+        moves.push([(sq[0].ord - 1).chr, sq[1]].join("")) # left
+        moves.push([(sq[0].ord + 1).chr, sq[1]].join("")) # right
+        moves.push([sq[0].ord - 1).chr, (sq[1].to_i + 1).to_s].join("")) # up-left
+        moves.push([sq[0].ord + 1).chr, (sq[1].to_i + 1).to_s].join("")) # up-right
+        moves.push([sq[0].ord - 1).chr, (sq[1].to_i - 1).to_s].join("")) # down-left
+        moves.push([sq[0].ord + 1).chr, (sq[1].to_i - 1).to_s].join("")) # down-right
+
+        # identify which moves are valid
+        valid_moves = moves.select do |move|
+            king.valid_move?(king.pos, move, @white, @black)
+        end
+
+    def congratulate
+        # TODO
+    end
+
+    def check?
+        case @turn
+        when "white"
+            king_square = find_king(@white).pos
+            @black.any? do |piece|
+                piece.valid_move?(piece.pos, king_square, @white, @black)
+            end
+        when "black"
+            king_square = find_king(@black).pos
+            @white.any? do |piece|
+                piece.valid_move?(piece.pos, king_square, @white, @black)
+            end
+        end
+    end
+
+    def find_king set
+        set.find { |item| item.type == "king" }
+    end
+
     def get_first
         begin
             update_display()
@@ -58,14 +150,21 @@ class Chess
             if !on_board?(from)
                 raise OffBoardError
             end
-            if !find_piece(from, @white, @black)
+            piece = find_piece(from, @white, @black)
+            if !piece
                 raise NoPieceFoundError
+            end
+            if @turn != piece.color
+                raise WrongSetError
             end
         rescue OffBoardError => e
             e.message()
             retry
         rescue NoPieceFoundError => e
             e.message(from)
+            retry
+        rescue WrongSetError => e
+            e.message()
             retry
         end
         return from
@@ -77,79 +176,59 @@ class Chess
             first = find_piece(from, @white, @black)
             print "\nSelect where to move #{first.type} at #{from}: "
             to = gets.chomp()
-            unless on_board?(to)
-                raise
+            if !on_board?(to)
+                raise OffBoardError
+            end
+            piece = find_piece(to, @white, @black)
+            if piece && piece.color == @turn
+                raise SameSetError
             end
         rescue Interrupt
             from = get_first()
             retry
-        rescue => e
-            print "Location is not on the board. Please try again\n"
-            print "Press Enter to continue\n"
-            gets.chomp()
-            puts e
+        rescue OffBoardError => e
+            e.message()
+            retry
+        rescue SameSetError => e
+            e.message(find_piece(to, @white, @black))
             retry
         end
         return to
     end
 
     def end_turn()
-        if @turn == 1
-            @turn = 2
+        if @turn == "white"
+            @turn = "black"
         else
-            @turn = 1
+            @turn = "white"
         end
     end
 
     # moves piece from one square (from) to another (to)
     # manipulates internal states of objects. return value unimportant
     def move from, to
-        # check whether player selections are on board
-        unless on_board?(from) && on_board?(to)
-            puts "One or both selections do not exist on the board"
-            return
-        end
-
-        first = find_piece(from, @white, @black)
-        # check whether first square contains a piece
-        if first
+        # get piece
+        piece = find_piece(from, @white, @black)
+        # if move is valid, execute it and increment piece's move counter
+        if piece.valid_move?(from, to, @white, @black)
+            
+            # check for piece at destination square.  remove it first if so
             second = find_piece(to, @white, @black)
-            # check whether second square contains a piece
             if second
-                # pieces should not be from same set
-                if first.color == second.color
-                    puts "#{second.color} #{second.type} already exists at #{to}"
-                    return
-                end
-                
-                # if move is valid, execute it and increment piece's move counter
-                if first.valid_move?(from, to, @white, @black)
-                    first.pos = to
-                    first.move += 1
-                    
-                    # remove piece from corresponding set
-                    case second.color
-                    when "white"
-                        @white.delete(second)
-                    when "black"
-                        @black.delete(second)
-                    end
-                    draw_board()
-                else
-                    puts "Invalid move from #{from} to #{to}"
-                end
-            else
-                # if move is valid, execute it and increment piece's move counter
-                if first.valid_move?(from, to, @white, @black)
-                    first.pos = to
-                    first.move += 1
-                    draw_board()
-                else
-                    puts "Invalid move from #{from} to #{to}"
-                end
+                # remove piece from corresponding set
+                case second.color
+                when "white"
+                    @white.delete(second)
+                when "black"
+                    @black.delete(second)
+                end 
             end
+            
+            # move piece to new location
+            piece.pos = to
+            piece.move += 1
         else
-            puts "No piece exists at square #{from}"
+            raise InvalidMoveError
         end
     end
 
@@ -211,9 +290,14 @@ class Chess
     # redraws the display including the board and game text
     def update_display
         refresh()
-        print "Player #{@turn}, it's your turn\n\n"
+        print "<<<<<<<<<<black>>>>>>>>>>\n"
         draw_board()
-        # print "Please type your move (separate with a comma): "
+        print "<<<<<<<<<<white>>>>>>>>>>\n\n"
+        if check?()
+            print "You have been checked, #{@turn}. Protect your king\n"
+        else
+            print "It's your turn, #{@turn}\n"
+        end
     end
 
     # draws the board to the console
@@ -268,8 +352,32 @@ class OffBoardError < StandardError
 end
 
 class NoPieceFoundError < StandardError
-    def message from
-        print "No piece found at #{from}. Please try again\n"
+    def message square
+        print "No piece found at #{square}. Please try again\n"
+        print "Press Enter to continue"
+        gets.chomp()
+    end
+end
+
+class SameSetError < StandardError
+    def message piece
+        print "Cannot attack own #{piece.type} at #{piece.pos}. Please try again\n"
+        print "Press Enter to continue"
+        gets.chomp()
+    end
+end
+
+class WrongSetError < StandardError
+    def message
+        print "You may not move your opponent's pieces. Please try again\n"
+        print "Press Enter to continue"
+        gets.chomp()
+    end
+end
+
+class InvalidMoveError < StandardError
+    def message from, to
+        print "Invalid move from #{from} to #{to}\n"
         print "Press Enter to continue"
         gets.chomp()
     end
